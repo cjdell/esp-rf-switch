@@ -1,0 +1,237 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <title>RF Switch Setup</title>
+
+  <style type="text/css">
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      box-sizing: border-box;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    .page {
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    .device-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .device {
+      display: flex;
+    }
+
+    .device.template {
+      display: none;
+    }
+
+    .device > * {
+      flex: 2;
+      padding: 2px 4px;
+      height: 24px;
+      border: solid 2px #aaa;
+      margin: 5px;
+      border-radius: 3px;
+      width: 0;
+    }
+
+    .device a {
+      flex: 1;
+      display: block;
+      text-align: center;
+      line-height: 24px;
+      text-decoration: none;
+      color: #000;
+    }
+
+    .device a:hover {
+      background: #ddd;
+    }
+
+    .addDevice,
+    .save {
+      display: block;
+      text-align: center;
+      line-height: 24px;
+      text-decoration: none;
+      color: #000;
+      border: solid 2px #aaa;
+      border-radius: 3px;
+      margin: 10px 5px;
+    }
+  </style>
+
+  <script type="text/javascript">
+    var deviceTemplate;
+    var loadedDevices;
+
+    window.addEventListener('load', function() {
+      var addDeviceButton = document.querySelector('.addDevice');
+      var saveButton = document.querySelector('.save');
+
+      deviceTemplate = document.querySelector('.device.template');
+      deviceTemplate.classList.remove('template');
+      deviceTemplate.remove();
+
+      loadDevices();
+
+      addDeviceButton.addEventListener('click', addDevice);
+      saveButton.addEventListener('click', function() {
+        loadedDevices = parseDevices();
+        saveDevices(loadedDevices);
+      });
+    });
+
+    function loadDevices() {
+      window.fetch('/devices.json').then(function(res) {
+        if (res.status !== 200) throw new Error(res.statusText);
+        return res.json();
+      }).then(function(devices) {
+        loadedDevices = devices;
+        showDevices(loadedDevices);
+      }).catch(function(err) {
+        if (err instanceof SyntaxError) {
+          loadedDevices = [];
+          showDevices(loadedDevices);
+        }
+        console.error(err);
+        alert('Error loading: ' + err.message);
+      });
+    }
+
+    function showDevices(devices) {
+      var list = document.querySelector('.device-list');
+
+      list.innerHTML = '';
+
+      devices.forEach(function(device) {
+        var deviceNode = deviceTemplate.cloneNode(true);
+        var nameInput = deviceNode.querySelector('.name');
+        var codeInput = deviceNode.querySelector('.code');
+        var detectButton = deviceNode.querySelector('.detect');
+        var onButton = deviceNode.querySelector('.on');
+        var offButton = deviceNode.querySelector('.off');
+
+        nameInput.value = device.name;
+        codeInput.value = device.code;
+
+        list.appendChild(deviceNode);
+
+        detectButton.addEventListener('click', detectDevice.bind(null, device, deviceNode));
+
+        onButton.addEventListener('click', function() {
+          sendOnOff(codeInput.value, true);
+        });
+
+        offButton.addEventListener('click', function() {
+          sendOnOff(codeInput.value, false);
+        });
+      });
+    }
+
+    function parseDevices() {
+      var list = document.querySelector('.device-list');
+
+      var devices = [].map.call(list.children, function(deviceNode) {
+        var nameInput = deviceNode.querySelector('.name');
+        var codeInput = deviceNode.querySelector('.code');
+
+        return {
+          name: nameInput.value,
+          code: codeInput.value
+        };
+      });
+
+      return devices;
+    }
+
+    function addDevice() {
+      loadedDevices = parseDevices();
+      loadedDevices.push({ name: '', code: '' });
+      showDevices(loadedDevices);
+    }
+
+    function saveDevices(devices) {
+      window.fetch('/devices.json?json=' + encodeURIComponent(JSON.stringify(devices)), {
+        method: 'post',
+        // body: JSON.stringify(devices)
+      }).then(function(res) {
+        if (res.status !== 200) throw new Error(res.statusText);
+        alert('Save successful');
+      }).catch(function(err) {
+        console.error(err);
+        alert('Error saving: ' + err.message);
+      });
+    }
+
+    function detectDevice(device, deviceNode) {
+      var codeInput = deviceNode.querySelector('.code');
+
+      window.fetch('/listen').then(function(res) {
+        if (res.status !== 200) throw new Error(res.statusText);
+        return res.text();
+      }).then(function(text) {
+        if (text === 'Not available') return;
+
+        var parts = text.split(':');
+        var code = parseInt(parts[0], 10);
+        var bitLength = parts[1];
+
+        code = (code >> 1) << 1;
+
+        codeInput.value = code + ':' + bitLength;
+      }).catch(function(err) {
+        console.error(err);
+        alert('Error detecting: ' + err.message);
+      });
+    }
+
+    function sendOnOff(codeStr, on) {
+      var parts = codeStr.split(':');
+      var code = parseInt(parts[0], 10);
+      var bitLength = parts[1];
+
+      if (on) code += 1;
+
+      codeStr = code + ':' + bitLength;
+
+      window.fetch('/cmd?code=' + codeStr);
+    }
+  </script>
+</head>
+
+<body>
+  <div class="page">
+    <h1>RF Switch Setup</h1>
+
+    <ul class="device-list">
+      <li class="device template">
+        <input type="text" class="name" placeholder="Device name" />
+        <input type="text" class="code" placeholder="Code" />
+        <a href="javascript:void(0)" class="detect" title="Detect the last code sent from your remote control">Detect</a>
+        <a href="javascript:void(0)" class="on">On</a>
+        <a href="javascript:void(0)" class="off">Off</a>
+      </li>
+      <li>
+        <span>Loading...</span>
+      </li>
+    </ul>
+
+    <a href="javascript:void(0)" class="addDevice">Add device</a>
+    <a href="javascript:void(0)" class="save">Save</a>
+  </div>
+</body>
+
+</html>
