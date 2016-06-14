@@ -29,9 +29,9 @@ Configuration
 - Disconnect pin 0
 - Turn on ESP, it will create a hotspot for WiFi configuration
 - Connect to SSID `ESPRFSwitchXXXXXX`
-- Open browser to `192.168.1.4`. Follow instructions
+- Open browser to `192.168.4.1`. Follow instructions
 
-ESP should now be on the network. You will need to discover its IP address by looking at yours router's DHCP table and scanning for it.
+ESP should now be on the network. You will need to discover its IP address by looking at yours router's DHCP table or scanning for it.
 
 - Open browser to your `http:\\{ESPIP\setup`
 - Add your device names and use `Listen` button to detect the code from your energenie remote
@@ -40,4 +40,4 @@ ESP should now be on the network. You will need to discover its IP address by lo
 
 ![Hardware](images/web-gui-setup.png)
 
-ESP is now configured. If you are running the Zetta ESP scout, it will automatically be detected used by Zetta.
+ESP is now configured. If you are running the Zetta ESP scout, it will automatically be detected and used by Zetta.
