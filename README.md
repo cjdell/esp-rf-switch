@@ -6,7 +6,7 @@ Control your remote Energenie devices (and other 433Mhz modules) with the ESP826
 Hardware
 --------
 
-![Hardware](images/esp-rf-modules.attached.jpg)
+![Hardware](images/esp-rf-modules-attached.jpg)
 
 Prequisties
 -----------
